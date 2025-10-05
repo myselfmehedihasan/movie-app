@@ -184,6 +184,5 @@ This project is open-source under the **MIT License**.
 
 ---
 
-Would you like me to **add a “Live Demo” and “Preview GIF section”** at the top (for example, showing a running preview of your app)?  
-It makes the README look much more professional and eye-catching for recruiters or GitHub visitors.
+
 ```
