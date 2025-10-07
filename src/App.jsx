@@ -1,9 +1,19 @@
+// App.jsx
 import React, { useEffect, useState } from "react";
 import Search from "./Components/Search";
+import { Bouncy } from "ldrs/react";
+import "ldrs/react/Bouncy.css";
+import MovieCard from "./Components/MovieCard";
+import { useDebounce } from "react-use";
+import { updateSearchCount } from "./appwrite";
+import TrendingCarousel from "./Components/TrendingCarousel";
+import AllMovies from "./Components/AllMovies";
 
+// TMDB API base URL
 const API_BASED_URL = "https://api.themoviedb.org/3";
+// TMDB API Key from env
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
-
+// Fetch options with headers
 const API_OPTIONS = {
   method: "GET",
   headers: {
@@ -13,58 +23,101 @@ const API_OPTIONS = {
 };
 
 const App = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
-  const [movieList, setMovieList] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(""); // search input
+  const [errorMessage, setErrorMessage] = useState(""); // API errors
+  const [movieList, setMovieList] = useState([]); // movies from API
+  const [trendingMovies, setTrendingMovies] = useState([]); // trending from TMDB
+  const [isLoading, setIsLoading] = useState(false); // loading spinner
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(""); // debounce input
 
-  const fetchMovies = async () => {
+  // Debounce search input
+  useDebounce(() => setDebouncedSearchTerm(searchTerm), 500, [searchTerm]);
+
+  // Fetch movies from TMDB
+  const fetchMovies = async (query = "") => {
     setIsLoading(true);
-    setErrorMessage('');
+    setErrorMessage("");
 
     try {
-      const endpoint = `${API_BASED_URL}/discover/movie?sort_by=popularity.desc`;
+      const endpoint = query
+        ? `${API_BASED_URL}/search/movie?query=${encodeURIComponent(query)}`
+        : `${API_BASED_URL}/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&primary_release_year=2025&sort_by=popularity.desc`;
 
       const response = await fetch(endpoint, API_OPTIONS);
+      if (!response.ok) throw new Error("Failed to fetch movies");
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch movies");
-      }
       const data = await response.json();
-
-      if (data.Response === "False") {
-        setErrorMessage(data.Error || "Failed to Fetch movies");
-        setMovieList([]);
-        return;
-      }
       setMovieList(data.results || []);
+
+      // Update search count in Appwrite
+      if (query && data.results.length > 0) {
+        await updateSearchCount(query, data.results[0]);
+      }
     } catch (error) {
-      console.error(`Error for fetching Movies : ${error}`);
-      setErrorMessage("Error fetching movies. Please try again later ... ");
-    }finally{
-      setIsLoading(false)
+      console.error(error);
+      setErrorMessage("Error fetching movies. Please try again later...");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {}, []);
+  // Load trending movies from TMDB (not Appwrite)
+  const loadTrendingMovies = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASED_URL}/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&primary_release_year=2025&sort_by=vote_count.desc&vote_average.lte=10&vote_count.gte=1`,
+        API_OPTIONS
+      );
+      
+      if (!response.ok) throw new Error("Failed to fetch trending movies");
+      
+      const data = await response.json();
+      setTrendingMovies(data.results || []);
+    } catch (error) {
+      console.error("Error loading trending movies:", error);
+      setTrendingMovies([]);
+    }
+  };
+
+  // Fetch movies on debounced search change
+  useEffect(() => {
+    fetchMovies(debouncedSearchTerm);
+  }, [debouncedSearchTerm]);
+
+  // Load trending movies once on mount
+  useEffect(() => {
+    loadTrendingMovies();
+  }, []);
+
   return (
     <main>
-      <div className="pattern"></div>
       <div className="wrapper">
+        {/* Hero background */}
+        <img
+          src="/hero-bg.png"
+          alt="Hero background"
+          className="absolute inset-0 w-full h-full object-cover opacity-40 -z-10"
+        />
+
+        {/* Trending movies carousel - passes movies from TMDB */}
+        {trendingMovies.length > 0 && (
+          <TrendingCarousel trendingMovies={trendingMovies} />
+        )}
+
+        {/* Header with title and search */}
         <header>
           <h1>
-            <img src="/public/hero.png" alt="" />
-            Find<span className="text-gradient">Movies</span> You'll Enjoy
-            Without the Hassle
+            Find <span className="text-gradient">Movies</span> You'll Enjoy
           </h1>
-          <Search
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-          ></Search>
+          <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
-        <section className="all-movies">
-          {errorMessage && <p className="text-red-500">{errorMessage}</p>}
-        </section>
+
+        {/* All movies list */}
+        <AllMovies 
+          movieList={movieList} 
+          isLoading={isLoading} 
+          errorMessage={errorMessage} 
+        />
       </div>
     </main>
   );
