@@ -2,6 +2,7 @@
 
 import React, { useState, useId } from "react";
 import AnimatedButton from "./AnimatedButton";
+import { Link } from "react-router";
 const MenuIcon = () => (
   <svg
     className="pointer-events-none "
@@ -182,9 +183,11 @@ function GlassmorphismHeader() {
             </div>
 
             {}
-            <Button variant="glass" size="sm" className="hidden sm:flex">
-              Login
-            </Button>
+            <Link to="/login">
+              <Button variant="glass" size="sm" className="hidden sm:flex">
+                Login
+              </Button>
+            </Link>
 
             {}
             <div className="md:hidden">
