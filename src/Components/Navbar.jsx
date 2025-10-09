@@ -110,7 +110,7 @@ const NavigationMenuLink = ({ href, className = "", children }) => (
 );
 const navigationLinks = [
   {
-    href: "#",
+    href: "/",
     label: "Home",
   },
   {
@@ -136,7 +136,7 @@ function GlassmorphismHeader() {
           {}
           <div className="flex-shrink-0">
             <a
-              href="#"
+              href="/"
               className="text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition-colors duration-300"
             >
               <AnimatedButton></AnimatedButton>

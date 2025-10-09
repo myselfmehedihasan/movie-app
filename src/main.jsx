@@ -7,24 +7,31 @@ import App from "./App.jsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import MovieDetails from "./Components/MovieDetails.jsx";
 import Login5 from "./Components/Login.jsx";
-import Signin from "./Components/SignIn.jsx";
+import SignUp from "./Components/SignUp.jsx";
+import Layout from "./Components/Layout.jsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <App />,
-  },
-  {
-    path: "/movie/:id",
-    element: <MovieDetails />,
-  },
-  {
-    path: "login",
-    element: <Login5></Login5>,
-  },
-  {
-    path: "signin",
-    element: <Signin></Signin>,
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <App />,
+      },
+      {
+        path: "movie/:id",
+        element: <MovieDetails />,
+      },
+      {
+        path: "login",
+        element: <Login5 />,
+      },
+      {
+        path: "signup",
+        element: <SignUp />,
+      },
+    ],
   },
 ]);
 

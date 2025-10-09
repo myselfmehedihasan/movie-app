@@ -42,7 +42,7 @@ const ChevronRightIcon = ({ className }) => (
    🎠 TRENDING CAROUSEL COMPONENT
    ====================================================== */
 
-export default function TrendingCarousel({ trendingMovies = [] }) {
+function TrendingCarousel({ apiBaseUrl, apiOptions }) {
   const navigate = useNavigate();
   
   // 🟢 STATE: Tracks currently active slide index
@@ -51,11 +51,43 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
   // 🟢 STATE: Whether carousel autoplay is paused (e.g. on hover)
   const [isPaused, setIsPaused] = useState(false);
 
+  // 🟢 STATE: Trending movies fetched from TMDB
+  const [trendingMovies, setTrendingMovies] = useState([]);
+
+  // 🟢 STATE: Loading state
+  const [isLoading, setIsLoading] = useState(true);
+
   // 🟢 REF: Stores autoplay interval so we can clear it
   const autoplayIntervalRef = useRef(null);
 
   // 🟢 CONFIG: Autoplay interval delay in ms
   const autoplayDelay = 3000;
+
+  // Load trending movies from TMDB
+  const loadTrendingMovies = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/discover/movie?include_adult=false&include_video=false&language=en-US&page=1&primary_release_year=2025&sort_by=vote_count.desc&vote_average.lte=10&vote_count.gte=1`,
+        apiOptions
+      );
+      
+      if (!response.ok) throw new Error("Failed to fetch trending movies");
+      
+      const data = await response.json();
+      setTrendingMovies(data.results || []);
+    } catch (error) {
+      console.error("Error loading trending movies:", error);
+      setTrendingMovies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load trending movies on mount
+  useEffect(() => {
+    loadTrendingMovies();
+  }, []);
 
   // Transform movie data to card format
   const cardData = trendingMovies.slice(0, 9).map((movie) => ({
@@ -71,7 +103,7 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
   }));
 
   /* ======================================================
-     🔁 AUTOPLAY & SLIDE CONTROLS
+     🔄 AUTOPLAY & SLIDE CONTROLS
      ====================================================== */
 
   // 🟢 FUNCTION: Go to next slide (wraps around)
@@ -109,23 +141,23 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
     }
   };
 
-  // 🟠 NOTE: Render nothing until movie data is loaded
-  if (cardData.length === 0) return null;
+  // 🟠 NOTE: Render nothing if loading or no data
+  if (isLoading || cardData.length === 0) return null;
 
   /* ======================================================
      🖼️ RENDER CAROUSEL UI
      ====================================================== */
   return (
-    <section className="relative w-full flex-col items-center justify-center font-sans overflow-hidden py-12">
+    <section className="relative w-full flex-col items-center justify-center font-sans overflow-hidden ">
       {/* Header */}
-      <header className="text-center mb-8">
+      {/* <header className="text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-white">
           Trending Movies
         </h1>
-      </header>
+      </header> */}
 
       <div
-        className="relative w-full max-w-6xl mx-auto px-4"
+        className="relative w-full max-w-6xl mx-auto px-4 mt-4"
         onMouseEnter={() => setIsPaused(true)} // ⏸️ Pause autoplay on hover
         onMouseLeave={() => setIsPaused(false)} // ▶️ Resume autoplay
       >
@@ -153,8 +185,8 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
             </motion.div>
           </div>
 
-          {/* ⚙️ Navigation Controls */}
-          <div className="flex items-center justify-center gap-6 mt-6">
+          {/*⚙️ Navigation Controls
+           <div className="flex items-center justify-center gap-6 mt-6">
             <button
               onClick={() => changeSlide(activeIndex - 1)}
               className="p-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors focus:ring-2 focus:ring-violet-500"
@@ -163,7 +195,7 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
               <ChevronLeftIcon className="w-6 h-6" />
             </button>
 
-            {/* Pagination dots */}
+            // {/* Pagination dots 
             <div className="flex items-center justify-center gap-2">
               {cardData.map((_, index) => (
                 <button
@@ -184,7 +216,8 @@ export default function TrendingCarousel({ trendingMovies = [] }) {
             >
               <ChevronRightIcon className="w-6 h-6" />
             </button>
-          </div>
+          </div> */}
+          
         </div>
       </div>
     </section>
@@ -271,3 +304,5 @@ function MovieCard({ card, index, activeIndex, totalCards, onClick }) {
     </motion.div>
   );
 }
+
+export default TrendingCarousel;

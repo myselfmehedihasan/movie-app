@@ -1,15 +1,73 @@
 import { Bouncy } from 'ldrs/react';
 import React, { useState, useEffect } from 'react';
 import MovieCard from './MovieCard';
+import Pagination from './Pagination';
+import { updateSearchCount } from '../appwrite';
 
 /**
  * AllMovies Component
- * Shows movies with sorting and filtering options
+ * Shows movies with sorting, filtering, and pagination
+ * Now handles its own data fetching
  */
-const AllMovies = ({ movieList, isLoading, errorMessage }) => {
+const AllMovies = ({ searchTerm, apiBaseUrl, apiOptions }) => {
   const [sortOrder, setSortOrder] = useState('none');
   const [sortedMovies, setSortedMovies] = useState([]);
   const [visibleCount, setVisibleCount] = useState(20);
+  
+  // Data fetching state
+  const [movieList, setMovieList] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Fetch movies from TMDB
+  const fetchMovies = async (query = "", page = 1) => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const endpoint = query
+        ? `${apiBaseUrl}/search/movie?query=${encodeURIComponent(query)}&page=${page}`
+        : `${apiBaseUrl}/discover/movie?include_adult=false&include_video=false&language=en-US&page=${page}&primary_release_year=2025&sort_by=popularity.desc`;
+
+      const response = await fetch(endpoint, apiOptions);
+      if (!response.ok) throw new Error("Failed to fetch movies");
+
+      const data = await response.json();
+      setMovieList(data.results || []);
+      setTotalPages(Math.min(data.total_pages || 1, 500)); // TMDB limits to 500 pages
+      setCurrentPage(page);
+
+      // Update search count in Appwrite
+      if (query && data.results.length > 0) {
+        await updateSearchCount(query, data.results[0]);
+      }
+
+      // Scroll to top of results
+      window.scrollTo({ top: 20, behavior: 'smooth' });
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Error fetching movies. Please try again later...");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      fetchMovies(searchTerm, newPage);
+    }
+  };
+
+  // Fetch movies when searchTerm changes (reset to page 1)
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchMovies(searchTerm, 1);
+  }, [searchTerm]);
 
   // Re-sort whenever sortOrder or movieList changes
   useEffect(() => {
@@ -67,7 +125,7 @@ const AllMovies = ({ movieList, isLoading, errorMessage }) => {
         <h2>All Movies</h2>
 
         {/* Sort dropdown */}
-        <div className="mb-4 flex justify-center items-center mb-10">
+        <div className="flex justify-center items-center mb-10">
           <label htmlFor="sort-select" className="mr-2 text-white">Sort by:</label>
           <select 
             id="sort-select"
@@ -75,7 +133,7 @@ const AllMovies = ({ movieList, isLoading, errorMessage }) => {
             value={sortOrder}
             className="px-3 py-2 border rounded text-amber-600"
           >
-            <option  value="none">Default</option>
+            <option value="none">Default</option>
             <option value="year-desc">Year: Newest First</option>
             <option value="year-asc">Year: Oldest First</option>
             <option value="rating-desc">Rating: Highest First</option>
@@ -98,6 +156,15 @@ const AllMovies = ({ movieList, isLoading, errorMessage }) => {
               <MovieCard key={movie.id} movie={movie} />
             ))}
           </ul>
+        )}
+
+        {/* Pagination */}
+        {!isLoading && !errorMessage && movieList.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
         )}
       </section>
     </div>
