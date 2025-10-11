@@ -148,7 +148,7 @@ function TrendingCarousel({ apiBaseUrl, apiOptions }) {
      🖼️ RENDER CAROUSEL UI
      ====================================================== */
   return (
-    <section className="relative w-full flex-col items-center justify-center font-sans overflow-hidden ">
+    <section className="relative w-full flex-col items-center justify-center font-sans overflow-hidden -mt-5 ">
       {/* Header */}
       {/* <header className="text-center mb-8">
         <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-white">

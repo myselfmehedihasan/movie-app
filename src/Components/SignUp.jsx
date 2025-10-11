@@ -1,13 +1,9 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import {
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  updateProfile,
-} from "firebase/auth";
-import { auth } from "../firebase/firebase.init";
+import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import GoogleandGithub from "./GoogleandGithub";
 
 const UserIcon = () => (
   <svg
@@ -149,8 +145,8 @@ const SignUp = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
-  // React Hook Form setup
   const {
     register,
     handleSubmit,
@@ -159,10 +155,9 @@ const SignUp = () => {
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
-    mode: "onChange", // Validate on change for better UX
+    mode: "onChange",
   });
 
-  // Watch form values
   const fullName = watch("fullName");
   const email = watch("email");
   const password = watch("password");
@@ -171,7 +166,6 @@ const SignUp = () => {
     setShowPassword(!showPassword);
   };
 
-  // Handle next step with validation
   const handleNext = async () => {
     let isValid = false;
 
@@ -186,52 +180,23 @@ const SignUp = () => {
     }
   };
 
-  // Form submission handler
   const onSubmit = async (data) => {
-    // console.log("Form Data:", data);
     try {
-      // Create user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        data.email,
-        data.password
-      );
+      await signUp(data.email, data.password, data.fullName);
 
-      console.log("User created successfully:", userCredential.user);
-
-      // Send verification email
-      try {
-        await sendEmailVerification(userCredential.user);
-
-        Swal.fire({
-          title: "Success!",
-          html: `
-        <p>Account created successfully!</p>
-        <p class="text-sm text-gray-600 mt-2">A verification email has been sent to <strong>${data.email}</strong></p>
-        <p class="text-sm text-gray-600 mt-1">Please verify your email before signing in.</p>
-      `,
-          icon: "success",
-          confirmButtonText: "OK",
-        }).then(() => {
-          reset();
-          navigate("/login");
-        });
-
-        // Updateprofile
-        const profile = {
-          displayName: fullName,
-        };
-        updateProfile(auth.currentUser, profile);
-      } catch (emailError) {
-        console.error("Error sending verification email:", emailError);
-
-        Swal.fire({
-          title: "Account Created",
-          text: "Your account was created but we couldn't send the verification email. You can request it again from the login page.",
-          icon: "warning",
-          confirmButtonText: "OK",
-        });
-      }
+      Swal.fire({
+        title: "Success!",
+        html: `
+          <p>Account created successfully!</p>
+          <p class="text-sm text-gray-600 mt-2">A verification email has been sent to <strong>${data.email}</strong></p>
+          <p class="text-sm text-gray-600 mt-1">Please verify your email before signing in.</p>
+        `,
+        icon: "success",
+        confirmButtonText: "OK",
+      }).then(() => {
+        reset();
+        navigate("/login");
+      });
     } catch (error) {
       console.error("Error creating user:", error);
 
@@ -241,6 +206,21 @@ const SignUp = () => {
         text: error.message,
       });
     }
+  };
+
+  const handleAuthSuccess = () => {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    });
+    Toast.fire({
+      icon: "success",
+      title: "Signed up successfully",
+    });
+    navigate("/");
   };
 
   return (
@@ -299,7 +279,6 @@ const SignUp = () => {
                     <input
                       id="fullName"
                       type="text"
-                      name="fullname"
                       placeholder="Enter your full name"
                       className={`w-full px-4 py-2 bg-gray-900 border ${
                         errors.fullName ? "border-red-500" : "border-gray-700"
@@ -494,6 +473,21 @@ const SignUp = () => {
                 </button>
               </div>
             )}
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-gray-800" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-black px-2 text-gray-500 font-medium">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            {/* Auth Providers */}
+            <GoogleandGithub onSuccess={handleAuthSuccess} />
           </form>
 
           {step > 1 && (

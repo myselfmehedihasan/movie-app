@@ -2,7 +2,6 @@ import { Bouncy } from 'ldrs/react';
 import React, { useState, useEffect } from 'react';
 import MovieCard from './MovieCard';
 import Pagination from './Pagination';
-import { updateSearchCount } from '../appwrite';
 
 /**
  * AllMovies Component
@@ -41,15 +40,10 @@ const AllMovies = ({ searchTerm, apiBaseUrl, apiOptions }) => {
       setTotalPages(Math.min(data.total_pages || 1, 500)); // TMDB limits to 500 pages
       setCurrentPage(page);
 
-      // Update search count in Appwrite
-      if (query && data.results.length > 0) {
-        await updateSearchCount(query, data.results[0]);
-      }
-
       // Scroll to top of results
       window.scrollTo({ top: 20, behavior: 'smooth' });
     } catch (error) {
-      console.error(error);
+      console.error("Error details:", error);
       setErrorMessage("Error fetching movies. Please try again later...");
     } finally {
       setIsLoading(false);
@@ -78,12 +72,12 @@ const AllMovies = ({ searchTerm, apiBaseUrl, apiOptions }) => {
     switch (sortOrder) {
       case "year-asc":
         sorted.sort((a, b) => 
-          (a.primary_release_year || 0) - (b.primary_release_year || 0)
+          (a.release_date?.slice(0, 4) || 0) - (b.release_date?.slice(0, 4) || 0)
         );
         break;
       case "year-desc":
         sorted.sort((a, b) => 
-          (b.primary_release_year || 0) - (a.primary_release_year || 0)
+          (b.release_date?.slice(0, 4) || 0) - (a.release_date?.slice(0, 4) || 0)
         );
         break;
       case "rating-asc":
@@ -122,7 +116,15 @@ const AllMovies = ({ searchTerm, apiBaseUrl, apiOptions }) => {
   return (
     <div>
       <section className="all-movies">
-        <h2>All Movies</h2>
+        <h2>
+          {searchTerm ? (
+            <>
+              Search Results for "<span className="text-yellow-400">{searchTerm}</span>"
+            </>
+          ) : (
+            'All Movies'
+          )}
+        </h2>
 
         {/* Sort dropdown */}
         <div className="flex justify-center items-center mb-10">
@@ -149,7 +151,9 @@ const AllMovies = ({ searchTerm, apiBaseUrl, apiOptions }) => {
             <Bouncy size="45" speed="1.75" color="white" />
           </div>
         ) : errorMessage ? (
-          <p className="text-red-500">{errorMessage}</p>
+          <p className="text-red-500 text-center">{errorMessage}</p>
+        ) : sortedMovies.length === 0 ? (
+          <p className="text-gray-400 text-center py-10">No movies found. Try a different search!</p>
         ) : (
           <ul>
             {sortedMovies.slice(0, visibleCount).map((movie) => (

@@ -41,7 +41,7 @@
   }
 
   header {
-    @apply sm:mt-10 mt-5;
+    @apply sm:mt-10 ;
   }
 
   header img {

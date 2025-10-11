@@ -1,10 +1,10 @@
-import { StrictMode, useEffect } from "react";
+import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
 // ✅ Correct imports
-import { createBrowserRouter, RouterProvider, useLocation } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import MovieDetails from "./Components/MovieDetails.jsx";
 import Login5 from "./Components/Login.jsx";
 import SignUp from "./Components/SignUp.jsx";
@@ -14,13 +14,17 @@ import Trending from "./Pages/Trending.jsx";
 import MyReviews from "./Pages/MyReviews.jsx";
 import Favorites from "./Pages/Favorites.jsx";
 import PrivateRoute from "./Private/PrivateRoute.jsx";
-
-
+import ScrollToTop from "./ScrolltoTop.jsx";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout />,
+    element: (
+      <>
+        <ScrollToTop />
+        <Layout />
+      </>
+    ),
     children: [
       {
         index: true,
@@ -65,9 +69,7 @@ const router = createBrowserRouter([
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router}>
-        
-      </RouterProvider>
+      <RouterProvider router={router} />
     </AuthProvider>
   </StrictMode>
 );

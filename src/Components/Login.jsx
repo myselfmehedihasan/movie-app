@@ -1,19 +1,39 @@
-import React, { useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useLayoutEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import {
-  sendPasswordResetEmail,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { auth } from "../firebase/firebase.init";
+import { useAuth } from "../context/AuthContext";
 import Swal from "sweetalert2";
+import GoogleandGithub from "./GoogleandGithub";
 
 function Login() {
   const [passwordVisible, setPasswordVisible] = React.useState(false);
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login, resetPassword } = useAuth();
 
-  const emailfRef = useRef();
-  // React Hook Form setup
+  // Get the page user came from, default to home
+  const from = location.state?.from || '/';
+
+  // Scroll to top immediately when component mounts (before paint)
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, []);
+
+  // Additional scroll on regular effect
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    
+    const timeout = setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   const {
     register,
     handleSubmit,
@@ -25,19 +45,9 @@ function Login() {
     setPasswordVisible(!passwordVisible);
   };
 
-  // Form submission handler
   const onSubmit = async (data) => {
-    // console.log("Form Data:", data);
-
-    // Use data.email and data.password from the form submission
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        data.email,
-        data.password
-      );
-
-      console.log("Sign In successfully:", userCredential);
+      const userCredential = await login(data.email, data.password);
 
       if (!userCredential.user.emailVerified) {
         Swal.fire({
@@ -61,14 +71,11 @@ function Login() {
           icon: "success",
           title: "Signed in successfully",
         });
+        // Redirect to the page they came from
+        navigate(from, { replace: true });
       }
-
-      // Reset the form after successful sign-in
-      // reset();
-      // navigate("/"); // Navigate to home page (or any route you want
     } catch (error) {
       console.error("Error Sign in user:", error);
-      // alert(error.message);
       Swal.fire({
         icon: "error",
         title: "Oops...",
@@ -89,8 +96,7 @@ function Login() {
       return;
     }
 
-    // send password reset email
-    sendPasswordResetEmail(auth, email)
+    resetPassword(email)
       .then(() => {
         Swal.fire({
           title: "Reset email Sent",
@@ -107,16 +113,30 @@ function Login() {
       });
   };
 
+  const handleAuthSuccess = () => {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: "top-end",
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+    });
+    Toast.fire({
+      icon: "success",
+      title: "Signed in successfully",
+    });
+    // Redirect to the page they came from
+    navigate(from, { replace: true });
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-900 via-black to-gray-900 -mt-28">
-      {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse"></div>
         <div className="absolute top-40 right-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse animation-delay-2000"></div>
         <div className="absolute -bottom-8 left-1/3 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-pulse animation-delay-4000"></div>
       </div>
 
-      {/* Login Card */}
       <div className="relative mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[400px] bg-black rounded-2xl shadow-2xl p-8 border border-gray-800">
         <div className="flex flex-col space-y-2 text-center">
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
@@ -129,7 +149,6 @@ function Login() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
           <div className="grid gap-4">
-            {/* Email Field */}
             <div className="grid gap-2">
               <label
                 className="text-sm font-medium text-gray-300"
@@ -161,7 +180,6 @@ function Login() {
               )}
             </div>
 
-            {/* Password Field */}
             <div className="grid gap-2">
               <div className="flex items-center">
                 <label
@@ -172,7 +190,7 @@ function Login() {
                 </label>
                 <a
                   onClick={handleForgetPassword}
-                  className="ml-auto inline-block text-sm text-purple-400 hover:text-purple-300 font-medium"
+                  className="ml-auto inline-block text-sm text-purple-400 hover:text-purple-300 font-medium cursor-pointer"
                 >
                   Forgot password?
                 </a>
@@ -194,12 +212,6 @@ function Login() {
                     minLength: {
                       value: 6,
                       message: "Password must be at least 6 characters",
-                    },
-                    pattern: {
-                      value:
-                        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-                      message:
-                        "Password must contain uppercase, lowercase, number and special character",
                     },
                   })}
                 />
@@ -236,7 +248,6 @@ function Login() {
               )}
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -264,46 +275,7 @@ function Login() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-lg text-sm font-medium border-2 border-gray-800 bg-gray-900 hover:bg-gray-800 text-white h-11 px-4 py-2 w-full transition-all hover:border-gray-700 hover:shadow-md"
-            >
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 48 48">
-                <path
-                  fill="#EA4335"
-                  d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-                ></path>
-                <path
-                  fill="#4285F4"
-                  d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-                ></path>
-                <path
-                  fill="#FBBC05"
-                  d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-                ></path>
-                <path
-                  fill="#34A853"
-                  d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-                ></path>
-                <path fill="none" d="M0 0h48v48H0z"></path>
-              </svg>
-              Google
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center justify-center rounded-lg text-sm font-medium border-2 border-gray-800 bg-gray-900 hover:bg-gray-800 text-white h-11 px-4 py-2 w-full transition-all hover:border-gray-700 hover:shadow-md"
-            >
-              <svg
-                className="mr-2 h-5 w-5"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-              </svg>
-              GitHub
-            </button>
-          </div>
+          <GoogleandGithub onSuccess={handleAuthSuccess} />
         </form>
 
         <p className="text-center text-sm text-gray-400">

@@ -37,18 +37,20 @@ const App = () => {
         />
 
         {/* Header section with title and search */}
-        <header >
+        <header className="-mt-5">
           <h1>
             Find <span className="text-gradient">Movies</span> You'll Enjoy
           </h1>
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
-        {/* Trending movies carousel */}
-        <TrendingCarousel 
-          apiBaseUrl={API_BASED_URL}
-          apiOptions={API_OPTIONS}
-        />
+        {/* Trending movies carousel - Only show when search is empty */}
+        {!debouncedSearchTerm && (
+          <TrendingCarousel 
+            apiBaseUrl={API_BASED_URL}
+            apiOptions={API_OPTIONS}
+          />
+        )}
 
         {/* All movies list with search results */}
         <AllMovies 
@@ -62,7 +64,3 @@ const App = () => {
 };
 
 export default App;
-
-
-
-
